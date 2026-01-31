@@ -1,0 +1,28 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "lint": {
+      "inputs": [
+        "src/**/*",
+        "apps/**/*",
+        "libs/**/*",
+        "test/**/*",
+        "eslint.config.*",
+        ".eslintrc.*",
+        "package.json"
+      ]
+    },
+    "format": {
+      "cache": false
+    },
+    "test": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

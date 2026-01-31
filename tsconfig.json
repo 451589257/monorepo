@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./apps/react/tsconfig.app.json" },
+    { "path": "./apps/react/tsconfig.node.json" },
+    { "path": "./apps/vue3/tsconfig.app.json" },
+    { "path": "./servers/nestjs/tsconfig.json" },
+    { "path": "./packages/utils/tsconfig.json" }
+  ]
+}
