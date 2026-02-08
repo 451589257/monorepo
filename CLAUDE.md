@@ -53,12 +53,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 提交信息格式如下：
 
 ```text
-feat: xxxx
+type: 简要标题
+# 或
+type(scope): 简要标题
 
-- xxxx
-- xxxx
-- xxx
+- 要点1（可写影响范围，如 nestjs / apps/vue3 / packages/utils）
+- 要点2
+- 要点3
 ```
+
+- 标题要求：
+  - `type` 必填；`scope` 可选（涉及明确模块时建议加）
+  - 标题一句话概括改动主题，避免空泛描述
+
+- body 要求：
+  - 使用 bullet 列表逐条说明“做了什么”
+  - 以重点概况为主，可按复杂度展开，不限制条目数量
+  - 涉及多个模块时，建议在条目内标明影响范围
+
+- 示例（无 scope）：
+
+```text
+feat: 重构 usePagination 与 useForm，新增无限加载与事件多播支持
+
+- 重构 usePagination，移除 table/page 嵌套对象，改为扁平化属性返回，提升使用便捷性
+- 新增 append 模式支持无限加载场景，增加 loadingMore、hasMore、loadMore 等状态与方法
+- 支持 data 异步提取与 dedupeKey 去重配置，优化大数据列表处理
+- 将 onSuccess/onError/onComplete 改为多播订阅模式，支持重复注册多个回调
+- 优化 useForm，send 方法支持返回 undefined/null 视为成功，新增 messages 文案配置覆盖默认错误提示
+- 统一 useForm 错误返回结构，区分重复提交、后端失败、请求异常三种场景
+- 优化 v-input-filter 指令，增加输入法合成阶段处理与事件清理，修复 IME 输入异常
+- 新增 usePagination 与 useForm 完整单元测试覆盖
+- 更新相关文档、示例代码，为 playground 集成 UnoCSS 并重构样式
+```
+
+- 示例（有 scope）：
+
+```text
+feat(servers/nestjs): 优化用户查询接口与缓存策略
+
+- 调整查询参数与默认分页行为，减少慢查询
+- 新增 Redis 缓存与失效逻辑，降低接口平均耗时
+- 补充 e2e 测试与接口文档说明
+```
+
+- 前缀按场景选择：
+  - `feat`：新增功能或能力
+  - `fix`：修复缺陷或异常行为
+  - `chore`：依赖、脚本、工程配置等杂务变更
+  - `docs`：文档内容变更
+  - `refactor`：重构（不新增功能、不修复缺陷）
+  - `test`：测试用例或测试配置变更
+  - `style`：仅代码风格或格式调整
+  - `perf`：性能优化
+  - `ci`：CI/CD 流程与配置变更
+  - `build`：构建系统或打包配置变更
 
 ## 输出要求
 - 明确列出改动文件与验证命令
