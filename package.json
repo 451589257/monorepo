@@ -23,6 +23,5 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vue-eslint-parser": "^9.4.3"
-  },
-  "packageManager": "pnpm@9.0.0"
+  }
 }
