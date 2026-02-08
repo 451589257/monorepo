@@ -49,5 +49,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 共享包规则（仅当修改 `packages/**` 时必须遵守）
 - 保持工具库 API 稳定性：不做破坏性改动，除非用户明确要求并注明迁移影响
 
+## 提交规则（必须遵守）
+- 提交信息格式如下：
+
+```text
+feat: xxxx
+
+- xxxx
+- xxxx
+- xxx
+```
+
 ## 输出要求
 - 明确列出改动文件与验证命令
