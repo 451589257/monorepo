@@ -7,6 +7,7 @@ import vue from 'eslint-plugin-vue';
 import vueParser from 'vue-eslint-parser';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import { fileURLToPath } from 'node:url';
 
 const base = defineConfig([
   {
@@ -66,7 +67,33 @@ const node = defineConfig([
 
 const prettier = defineConfig([eslintConfigPrettier]);
 
-const root = defineConfig([globalIgnores(['dist', 'eslint.config.js']), ...base, ...prettier]);
+const nestjs = defineConfig([
+  {
+    files: ['servers/nestjs/**/*.{ts,js}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+      sourceType: 'commonjs',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: fileURLToPath(new URL('./servers/nestjs', import.meta.url)),
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+]);
 
-export { base, react, vueConfig as vue, node, prettier, root };
+const root = defineConfig([globalIgnores(['dist', 'eslint.config.js']), ...base, ...prettier, ...nestjs]);
+
+export { base, react, vueConfig as vue, node, prettier, nestjs, root };
 export default root;
