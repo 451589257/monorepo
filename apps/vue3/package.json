@@ -12,12 +12,15 @@
   },
   "dependencies": {
     "@monorepo/utils": "workspace:*",
-    "vue": "^3.5.24"
+    "alova": "^3.5.1",
+    "vue": "^3.5.34"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.1",
-    "@vue/tsconfig": "^0.8.1",
-    "vite": "^7.2.4",
-    "vue-tsc": "^3.1.4"
+    "@tailwindcss/vite": "^4.3.0",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/tsconfig": "^0.9.1",
+    "tailwindcss": "^4.3.0",
+    "vite": "^8.0.13",
+    "vue-tsc": "^3.3.0"
   }
 }
