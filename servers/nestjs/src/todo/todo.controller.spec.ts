@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getLoggerToken, PinoLogger } from 'nestjs-pino';
 
 import { PrismaService } from '@/prisma/prisma.service';
 import { TodoController } from '@/todo/todo.controller';
@@ -10,7 +11,18 @@ describe('TodoController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TodoController],
-      providers: [TodoService, { provide: PrismaService, useValue: {} }],
+      providers: [
+        TodoService,
+        { provide: PrismaService, useValue: {} },
+        {
+          provide: PinoLogger,
+          useValue: { setContext: jest.fn(), info: jest.fn(), debug: jest.fn() },
+        },
+        {
+          provide: getLoggerToken(TodoService.name),
+          useValue: { setContext: jest.fn(), info: jest.fn(), debug: jest.fn() },
+        },
+      ],
     }).compile();
 
     controller = module.get<TodoController>(TodoController);

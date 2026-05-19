@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { LogRequest } from '@/common/decorators';
 import { PaginationDto } from '@/common/dto/pagination.dto';
 import { CustomParseIntPipe } from '@/common/pipes/parse-int.pipe';
 import { CreateTodoDto } from '@/todo/dto/create-todo.dto';
@@ -10,6 +11,7 @@ import { UpdateTodoDto } from '@/todo/dto/update-todo.dto';
 import { TodoService } from '@/todo/todo.service';
 
 @ApiTags('Todo')
+@LogRequest() // 类级别开启：本控制器下所有接口默认记录详细日志
 @Controller('todo')
 export class TodoController {
   constructor(private readonly todoService: TodoService) {}
@@ -42,6 +44,8 @@ export class TodoController {
   }
 
   @ApiOperation({ summary: '分页查询待办列表' })
+  // 列表接口响应较大，关闭 response 记录，避免日志过长
+  @LogRequest({ response: false, slowMs: 500 })
   @Post('list')
   list(@Query() query: PaginationDto, @Body() body: ListTodoBodyDto) {
     return this.todoService.list({ ...query, ...body });

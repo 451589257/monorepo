@@ -5,3 +5,6 @@ node_modules
 # Prisma SQLite local database
 /prisma/*.db
 /prisma/*.db-journal
+
+# 运行时日志
+/logs
