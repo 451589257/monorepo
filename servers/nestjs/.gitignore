@@ -1,6 +1,8 @@
 node_modules
-# Keep environment variables out of version control
+# 环境变量文件不入库（仅保留示例）
 .env
+.env.*
+!.env.example
 
 # Prisma SQLite local database
 /prisma/*.db

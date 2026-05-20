@@ -1,6 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+import pkg from '../../../package.json';
+
 /** Swagger 文档挂载路径 */
 export const SWAGGER_PATH = 'api-docs';
 
@@ -12,7 +14,7 @@ export function setupSwagger(app: INestApplication): string {
   const config = new DocumentBuilder()
     .setTitle('Nest Demo API')
     .setDescription('Todo 服务接口文档')
-    .setVersion('1.0')
+    .setVersion(pkg.version)
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

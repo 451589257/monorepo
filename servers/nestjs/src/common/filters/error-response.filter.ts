@@ -65,7 +65,8 @@ export class ErrorResponseFilter implements ExceptionFilter {
       this.logger.warn(logPayload, '请求失败');
     }
 
-    response.status(200).json({
+    // 错误响应保持真实 HTTP 状态码，body 仍走统一业务码包装
+    response.status(status).json({
       code,
       data: null,
       msg,

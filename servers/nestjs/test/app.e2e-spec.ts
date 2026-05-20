@@ -1,12 +1,10 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
-import { ErrorResponseFilter } from '../src/common/filters';
-import { SuccessResponseInterceptor } from '../src/common/interceptors';
-import { PrismaService } from '../src/prisma/prisma.service';
 import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('TodoController (e2e)', () => {
   let app: INestApplication<App>;
@@ -34,19 +32,8 @@ describe('TodoController (e2e)', () => {
       .useValue(prisma)
       .compile();
 
+    // AppModule 已通过 APP_PIPE/APP_FILTER/APP_INTERCEPTOR 完成全局注册，这里不再重复
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        stopAtFirstError: true,
-        whitelist: true,
-        transform: true,
-        transformOptions: {
-          enableImplicitConversion: true,
-        },
-      }),
-    );
-    app.useGlobalInterceptors(new SuccessResponseInterceptor());
-    app.useGlobalFilters(new ErrorResponseFilter());
     await app.init();
   });
 

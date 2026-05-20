@@ -16,11 +16,6 @@
       "@/*": ["./src/*"]
     },
     "incremental": true,
-    "strict": false,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "isolatedModules": true
   }
 }
