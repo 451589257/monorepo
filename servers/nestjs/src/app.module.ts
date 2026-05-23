@@ -3,13 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 
-import { validateEnv } from '@/common/config/env.validation';
-import { ErrorResponseFilter } from '@/common/filters';
-import {
-  LoggingInterceptor,
-  ReqIdInterceptor,
-  SuccessResponseInterceptor,
-} from '@/common/interceptors';
+import { validateEnv } from '@/common/config/env.schema';
+import { ErrorResponseFilter } from '@/common/filters/error-response.filter';
+import { LoggingInterceptor } from '@/common/logging/logging.interceptor';
+import { ReqIdInterceptor } from '@/common/interceptors/req-id.interceptor';
+import { SuccessResponseInterceptor } from '@/common/interceptors/success-response.interceptor';
 import { buildLoggerOptions } from '@/common/logger/logger.config';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { TodoModule } from '@/todo/todo.module';

@@ -8,8 +8,8 @@ import {
 import { Response as ExpressResponse } from 'express';
 import { map, Observable } from 'rxjs';
 
-import { CODE } from '@/common/code';
-import { Response } from '@/common/interfaces/response.interface';
+import { CODE } from '@/common/constants/code';
+import { Response } from '@/common/types/response.type';
 
 @Injectable()
 export class SuccessResponseInterceptor implements NestInterceptor {

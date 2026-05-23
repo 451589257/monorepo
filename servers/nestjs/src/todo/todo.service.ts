@@ -4,8 +4,8 @@ import dayjs from 'dayjs';
 import { isNil, omitBy } from 'es-toolkit';
 import { PinoLogger } from 'nestjs-pino';
 
-import { PaginationDto } from '@/common/dto/pagination.dto';
-import { toList } from '@/common/utils/pagination.util';
+import { PaginationDto } from '@/common/pagination/pagination.dto';
+import { toList } from '@/common/pagination/pagination.util';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateTodoDto } from '@/todo/dto/create-todo.dto';
 import { ListTodoBodyDto } from '@/todo/dto/list-todo-body.dto';

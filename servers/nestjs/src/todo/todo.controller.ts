@@ -1,8 +1,8 @@
 import { Body, Controller, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { LogRequest } from '@/common/decorators';
-import { PaginationDto } from '@/common/dto/pagination.dto';
+import { LogRequest } from '@/common/logging/log-request.decorator';
+import { PaginationDto } from '@/common/pagination/pagination.dto';
 import { CustomParseIntPipe } from '@/common/pipes/parse-int.pipe';
 import { CreateTodoDto } from '@/todo/dto/create-todo.dto';
 import { ListTodoBodyDto } from '@/todo/dto/list-todo-body.dto';

@@ -4,10 +4,9 @@ import type { IncomingMessage } from 'node:http';
 import { ConfigService } from '@nestjs/config';
 import type { Params } from 'nestjs-pino';
 
-import { LogLevel, NodeEnv } from '@/common/config/env.validation';
+import { REQUEST_ID_HEADER } from '@/common/constants/http';
+import { LogLevel, NodeEnv } from '@/common/config/env.schema';
 
-/** 请求 ID 响应头名 */
-export const REQUEST_ID_HEADER = 'X-Request-Uuid';
 const REQUEST_ID_HEADER_LOWER = REQUEST_ID_HEADER.toLowerCase();
 
 /** 上游已带则复用，否则生成 uuid */

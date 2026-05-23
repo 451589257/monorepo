@@ -1,5 +1,5 @@
-import { PaginationDto } from '@/common/dto/pagination.dto';
-import { ListResponse } from '@/common/interfaces/response.interface';
+import { PaginationDto } from '@/common/pagination/pagination.dto';
+import { ListResponse } from '@/common/pagination/pagination.types';
 
 /**
  * 构造分页列表响应

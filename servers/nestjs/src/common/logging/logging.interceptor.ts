@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { tap } from 'rxjs';
 import type { Observable } from 'rxjs';
 
-import { LOG_REQUEST_KEY, type LogRequestOptions } from '@/common/decorators/log-request.decorator';
+import { LOG_REQUEST_KEY, type LogRequestOptions } from '@/common/logging/log-request.decorator';
 
 // 敏感字段，记录前替换为 ***
 const SENSITIVE_KEYS = new Set([

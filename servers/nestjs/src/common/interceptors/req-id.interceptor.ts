@@ -2,7 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Request, Response } from 'express';
 import type { Observable } from 'rxjs';
 
-import { REQUEST_ID_HEADER } from '@/common/logger/logger.config';
+import { REQUEST_ID_HEADER } from '@/common/constants/http';
 
 /**
  * 把 pino-http 注入到 req 上的 reqId（uuid）写到响应头 X-Request-Uuid，

@@ -2,8 +2,8 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/co
 import { Request, Response } from 'express';
 import { PinoLogger } from 'nestjs-pino';
 
-import { CODE } from '@/common/code';
-import { REQUEST_ID_HEADER } from '@/common/logger/logger.config';
+import { CODE, type CodeType } from '@/common/constants/code';
+import { REQUEST_ID_HEADER } from '@/common/constants/http';
 
 @Catch()
 export class ErrorResponseFilter implements ExceptionFilter {
@@ -21,7 +21,7 @@ export class ErrorResponseFilter implements ExceptionFilter {
       response.setHeader(REQUEST_ID_HEADER, String(request.id));
     }
 
-    let code: (typeof CODE)[keyof typeof CODE] = CODE.INTERNAL_ERROR;
+    let code: CodeType = CODE.INTERNAL_ERROR;
     let msg: string | unknown[] | Record<string, unknown> = '服务器内部错误';
     let status = 500;
 
