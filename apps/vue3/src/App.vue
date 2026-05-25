@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import TodoApp from '@/components/TodoApp.vue';
+import { RouterView } from 'vue-router';
+
+import AppNav from '@/components/AppNav.vue';
 </script>
 
 <template>
-  <main class="flex min-h-screen w-full items-center justify-center px-4 py-10">
-    <TodoApp />
+  <AppNav />
+  <main class="flex w-full justify-center px-4 pb-10">
+    <RouterView />
   </main>
 </template>

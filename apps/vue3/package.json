@@ -13,7 +13,8 @@
   "dependencies": {
     "@monorepo/utils": "workspace:*",
     "alova": "^3.5.1",
-    "vue": "^3.5.34"
+    "vue": "^3.5.34",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",

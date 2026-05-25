@@ -1,11 +1,9 @@
-import TodoApp from '@/components/TodoApp';
+import { RouterProvider } from 'react-router-dom';
+
+import { router } from '@/router';
 
 function App() {
-  return (
-    <main className="flex min-h-screen w-full items-center justify-center px-4 py-10">
-      <TodoApp />
-    </main>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
