@@ -15,6 +15,7 @@ export function setupSwagger(app: INestApplication): string {
     .setTitle('Nest Demo API')
     .setDescription('Todo 服务接口文档')
     .setVersion(pkg.version)
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

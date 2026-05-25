@@ -1,8 +1,10 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 
+import { AuthModule } from '@/auth/auth.module';
+import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { validateEnv } from '@/common/config/env.schema';
 import { ErrorResponseFilter } from '@/common/filters/error-response.filter';
 import { LoggingInterceptor } from '@/common/logging/logging.interceptor';
@@ -11,6 +13,7 @@ import { SuccessResponseInterceptor } from '@/common/interceptors/success-respon
 import { buildLoggerOptions } from '@/common/logger/logger.config';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { TodoModule } from '@/todo/todo.module';
+import { UserModule } from '@/user/user.module';
 
 @Module({
   imports: [
@@ -26,10 +29,17 @@ import { TodoModule } from '@/todo/todo.module';
       useFactory: (config: ConfigService) => buildLoggerOptions(config),
     }),
     PrismaModule,
+    UserModule,
+    AuthModule,
     TodoModule,
   ],
   controllers: [],
   providers: [
+    // 全局守卫:默认所有接口需登录,使用 @Public() 跳过
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
     // 全局校验管道
     {
       provide: APP_PIPE,

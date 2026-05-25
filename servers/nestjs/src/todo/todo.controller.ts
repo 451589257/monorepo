@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { Public } from '@/auth/decorators/public.decorator';
 import { LogRequest } from '@/common/logging/log-request.decorator';
 import { PaginationDto } from '@/common/pagination/pagination.dto';
 import { CustomParseIntPipe } from '@/common/pipes/parse-int.pipe';
@@ -11,7 +12,8 @@ import { UpdateTodoDto } from '@/todo/dto/update-todo.dto';
 import { TodoService } from '@/todo/todo.service';
 
 @ApiTags('Todo')
-@LogRequest() // 类级别开启：本控制器下所有接口默认记录详细日志
+@Public() // 暂时整体公开,后续按业务收紧鉴权
+@LogRequest() // 类级别开启:本控制器下所有接口默认记录详细日志
 @Controller('todo')
 export class TodoController {
   constructor(private readonly todoService: TodoService) {}

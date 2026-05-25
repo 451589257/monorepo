@@ -13,6 +13,29 @@ enum TodoStatus {
   DONE
 }
 
+model User {
+  id            Int            @id @default(autoincrement())
+  username      String         @unique
+  passwordHash  String
+  nickname      String?
+  createTime    DateTime       @default(now())
+  updateTime    DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id         Int       @id @default(autoincrement())
+  // 存 sha256 哈希,不落明文
+  tokenHash  String    @unique
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createTime DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model Todo {
   id          Int        @id @default(autoincrement())
   title       String
