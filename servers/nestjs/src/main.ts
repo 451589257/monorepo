@@ -1,12 +1,16 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from '@/app.module';
 import { setupSwagger } from '@/common/swagger/swagger.setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+
+  // 信任反向代理,使限流/日志能取到真实客户端 IP(X-Forwarded-For)
+  app.set('trust proxy', 1);
 
   // 使用 nestjs-pino 接管全局日志
   const logger = app.get(Logger);

@@ -59,6 +59,37 @@ export class EnvVars {
   @IsString()
   @IsOptional()
   JWT_REFRESH_EXPIRES_IN?: string = '7d';
+
+  /** argon2id 内存开销(KiB)，OWASP 推荐 ≥19456(19MiB) */
+  @IsInt()
+  @Min(8192)
+  @IsOptional()
+  ARGON2_MEMORY_COST: number = 19456;
+
+  /** argon2id 迭代次数，OWASP 推荐 ≥2 */
+  @IsInt()
+  @Min(2)
+  @IsOptional()
+  ARGON2_TIME_COST: number = 2;
+
+  /** argon2id 并行度 */
+  @IsInt()
+  @Min(1)
+  @Max(255)
+  @IsOptional()
+  ARGON2_PARALLELISM: number = 1;
+
+  /** 认证接口限流时间窗(秒) */
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  AUTH_THROTTLE_TTL: number = 60;
+
+  /** 认证接口限流窗口内最大请求数(按 IP) */
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  AUTH_THROTTLE_LIMIT: number = 5;
 }
 
 /** 校验环境变量；失败时直接抛错让进程启动失败 */

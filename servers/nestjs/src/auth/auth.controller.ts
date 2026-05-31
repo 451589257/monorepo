@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 
 import { AuthService } from '@/auth/auth.service';
 import { CurrentUser } from '@/auth/decorators/current-user.decorator';
@@ -12,6 +13,7 @@ import { LogRequest } from '@/common/logging/log-request.decorator';
 
 @ApiTags('Auth')
 @LogRequest()
+@UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -46,6 +48,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: '获取当前登录用户' })
+  @SkipThrottle()
   @Get('me')
   me(@CurrentUser() user: JwtPayload) {
     return this.authService.getCurrentUser(user.sub);

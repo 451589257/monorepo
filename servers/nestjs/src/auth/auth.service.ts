@@ -7,16 +7,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { User } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
 import { PinoLogger } from 'nestjs-pino';
 
 import { LoginDto } from '@/auth/dto/login.dto';
+import { PasswordService } from '@/auth/password.service';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { RefreshTokenService } from '@/auth/refresh-token.service';
 import type { JwtPayload } from '@/auth/types/jwt-payload.type';
 import { UserService } from '@/user/user.service';
-
-const BCRYPT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
@@ -25,6 +23,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly passwordService: PasswordService,
     private readonly logger: PinoLogger,
   ) {
     this.logger.setContext(AuthService.name);
@@ -36,7 +35,7 @@ export class AuthService {
       throw new ConflictException('用户名已被占用');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const passwordHash = await this.passwordService.hash(dto.password);
     const user = await this.userService.create({
       username: dto.username,
       passwordHash,
@@ -53,10 +52,13 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    const matched = await bcrypt.compare(dto.password, user.passwordHash);
+    const matched = await this.passwordService.verify(user.passwordHash, dto.password);
     if (!matched) {
       throw new UnauthorizedException('用户名或密码错误');
     }
+
+    // 平滑迁移:历史 bcrypt 哈希在校验通过后异步升级为 argon2id,失败不影响登录
+    await this.rehashIfNeeded(user, dto.password);
 
     this.logger.info({ userId: user.id, username: user.username }, '用户登录成功');
     return this.buildAuthResult(user);
@@ -97,6 +99,20 @@ export class AuthService {
       throw new NotFoundException('用户不存在');
     }
     return this.toUserVo(user);
+  }
+
+  /** 历史 bcrypt 哈希在登录校验通过后升级为 argon2id;升级失败仅记录,不阻断登录 */
+  private async rehashIfNeeded(user: User, plain: string) {
+    if (!this.passwordService.needsRehash(user.passwordHash)) {
+      return;
+    }
+    try {
+      const newHash = await this.passwordService.hash(plain);
+      await this.userService.updatePasswordHash(user.id, newHash);
+      this.logger.info({ userId: user.id }, '密码哈希已升级为 argon2id');
+    } catch (err) {
+      this.logger.warn({ userId: user.id, err: (err as Error)?.message }, '密码哈希升级失败');
+    }
   }
 
   private async buildAuthResult(user: User) {
