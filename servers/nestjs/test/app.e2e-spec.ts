@@ -10,15 +10,39 @@ describe('TodoController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: {
     $transaction: jest.Mock;
+    user: { findUnique: jest.Mock; create: jest.Mock };
+    refreshToken: { create: jest.Mock };
     todo: {
       findMany: jest.Mock;
       count: jest.Mock;
     };
   };
 
-  beforeEach(async () => {
+  let accessToken = '';
+
+  beforeAll(async () => {
+    const user = {
+      id: 1,
+      username: 'todouser',
+      passwordHash: '',
+      nickname: null,
+      createTime: new Date(),
+      updateTime: new Date(),
+    };
+
     prisma = {
       $transaction: jest.fn().mockResolvedValue([[], 0]),
+      user: {
+        // 注册:第一次查不到,创建后返回该用户
+        findUnique: jest.fn().mockResolvedValueOnce(null).mockResolvedValue(user),
+        create: jest.fn().mockImplementation(({ data }) => {
+          user.passwordHash = data.passwordHash;
+          return Promise.resolve(user);
+        }),
+      },
+      refreshToken: {
+        create: jest.fn().mockResolvedValue({}),
+      },
       todo: {
         findMany: jest.fn().mockReturnValue([]),
         count: jest.fn().mockReturnValue(0),
@@ -32,18 +56,31 @@ describe('TodoController (e2e)', () => {
       .useValue(prisma)
       .compile();
 
-    // AppModule 已通过 APP_PIPE/APP_FILTER/APP_INTERCEPTOR 完成全局注册，这里不再重复
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // 注册一个用户拿 access token,供受保护的 todo 接口使用
+    const res = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ username: 'todouser', password: 'secret123' });
+    accessToken = res.body.data.accessToken;
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
 
-  it('/todo/list (POST)', async () => {
+  it('未登录访问 /todo/list 返回 401', async () => {
     await request(app.getHttpServer())
       .post('/todo/list?pageNum=1&pageSize=10')
+      .send({})
+      .expect(401);
+  });
+
+  it('登录后 /todo/list (POST) 返回分页数据', async () => {
+    await request(app.getHttpServer())
+      .post('/todo/list?pageNum=1&pageSize=10')
+      .set('Authorization', `Bearer ${accessToken}`)
       .send({})
       .expect(200)
       .expect(({ body }) => {
