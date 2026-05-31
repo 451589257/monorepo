@@ -11,6 +11,7 @@ import { LoggingInterceptor } from '@/common/logging/logging.interceptor';
 import { ReqIdInterceptor } from '@/common/interceptors/req-id.interceptor';
 import { SuccessResponseInterceptor } from '@/common/interceptors/success-response.interceptor';
 import { buildLoggerOptions } from '@/common/logger/logger.config';
+import { HealthModule } from '@/health/health.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { TodoModule } from '@/todo/todo.module';
 import { UserModule } from '@/user/user.module';
@@ -32,6 +33,7 @@ import { UserModule } from '@/user/user.module';
     UserModule,
     AuthModule,
     TodoModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [

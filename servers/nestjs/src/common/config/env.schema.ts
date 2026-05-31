@@ -90,6 +90,14 @@ export class EnvVars {
   @Min(1)
   @IsOptional()
   AUTH_THROTTLE_LIMIT: number = 5;
+
+  /**
+   * CORS 允许的来源,逗号分隔(如 http://localhost:5173,http://localhost:3000)。
+   * 留空表示放行所有来源(仅建议开发环境)。
+   */
+  @IsString()
+  @IsOptional()
+  CORS_ORIGIN?: string;
 }
 
 /** 校验环境变量；失败时直接抛错让进程启动失败 */
