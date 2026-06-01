@@ -28,7 +28,18 @@
     "vue-eslint-parser": "^9.4.3"
   },
   "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react": "19",
+        "react-dom": "19"
+      }
+    },
     "packageExtensions": {
+      "antd-mobile-icons": {
+        "peerDependencies": {
+          "react": "*"
+        }
+      },
       "alova": {
         "peerDependencies": {
           "react": "*",

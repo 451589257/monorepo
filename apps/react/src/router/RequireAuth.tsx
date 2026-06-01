@@ -14,7 +14,7 @@ function RequireAuth({ children, guestOnly = false }: Props) {
   const location = useLocation();
 
   if (guestOnly && accessToken) {
-    return <Navigate to="/todos" replace />;
+    return <Navigate to="/home" replace />;
   }
   if (!guestOnly && !accessToken) {
     const redirect = `${location.pathname}${location.search}`;

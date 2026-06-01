@@ -13,6 +13,8 @@
   "dependencies": {
     "@monorepo/utils": "workspace:*",
     "alova": "^3.5.1",
+    "antd-mobile": "^5.42.3",
+    "antd-mobile-icons": "^0.3.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1"
@@ -22,6 +24,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "postcss-px-to-viewport-8-plugin": "^1.2.5",
     "tailwindcss": "^4.3.0",
     "vite": "^8.0.13"
   }

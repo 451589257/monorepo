@@ -21,6 +21,7 @@ model User {
   createTime    DateTime       @default(now())
   updateTime    DateTime       @updatedAt
   refreshTokens RefreshToken[]
+  todos         Todo[]
 }
 
 model RefreshToken {
@@ -41,6 +42,11 @@ model Todo {
   title       String
   description String?
   status      TodoStatus @default(PENDING)
+  // 归属用户;存量数据无主,设为可空兼容旧记录,新建时强制写入
+  userId      Int?
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createTime  DateTime   @default(now())
   updateTime  DateTime   @updatedAt
+
+  @@index([userId])
 }

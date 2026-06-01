@@ -1,5 +1,7 @@
 import { useRequest } from 'alova/client';
-import { useEffect, useState } from 'react';
+import { Button, Dialog, List, NavBar, Toast } from 'antd-mobile';
+import { UserOutline } from 'antd-mobile-icons';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { getMe, logout as logoutApi } from '@/api/auth';
@@ -16,27 +18,26 @@ function formatTime(value: string | null | undefined) {
 function ProfileView() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [errorMsg, setErrorMsg] = useState('');
+  const displayName = user?.nickname || user?.username || '未登录';
 
   const { loading, send: refresh } = useRequest(() => getMe(), { immediate: false });
 
   async function loadProfile() {
-    setErrorMsg('');
     try {
       const u = await refresh();
       setUser(u);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '加载失败');
+      Toast.show({ icon: 'fail', content: err instanceof Error ? err.message : '加载失败' });
     }
   }
 
   useEffect(() => {
     void loadProfile();
-    // 仅挂载时主动刷一次,后续点"刷新"按钮再触发
+    // 仅挂载时主动刷一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function onLogout() {
+  async function doLogout() {
     const refreshToken = getRefreshToken();
     if (refreshToken) {
       try {
@@ -48,71 +49,56 @@ function ProfileView() {
     clearAuth();
     void navigate('/login', { replace: true });
   }
+
+  function onLogout() {
+    void Dialog.confirm({
+      title: '退出登录',
+      content: '确认退出当前账号吗？',
+      confirmText: '退出',
+      cancelText: '取消',
+      onConfirm: () => void doLogout(),
+    });
+  }
+
   return (
-    <section className="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur dark:border-white/10 dark:bg-slate-900/60">
-      <header className="mb-6 flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-xl dark:bg-sky-500/15">
-          👤
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">个人中心</h1>
-          <p className="text-xs text-slate-500 dark:text-white/50">查看并管理你的账号</p>
+    <div className="page">
+      <NavBar back={null}>我的</NavBar>
+
+      <div className="profile-hero">
+        <div className="profile-hero__avatar">
+          <UserOutline />
         </div>
-      </header>
-
-      {loading ? (
-        <p className="text-sm text-slate-400 dark:text-white/40">加载中…</p>
-      ) : errorMsg ? (
-        <p className="text-sm text-rose-600 dark:text-rose-400">⚠ {errorMsg}</p>
-      ) : user ? (
-        <dl className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm dark:border-white/10 dark:bg-white/5">
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-500 dark:text-white/50">用户 ID</dt>
-            <dd className="font-medium text-slate-800 dark:text-white/90">#{user.id}</dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-500 dark:text-white/50">用户名</dt>
-            <dd className="font-medium text-slate-800 dark:text-white/90">{user.username}</dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-500 dark:text-white/50">昵称</dt>
-            <dd className="font-medium text-slate-800 dark:text-white/90">
-              {user.nickname || '—'}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-500 dark:text-white/50">注册时间</dt>
-            <dd className="font-medium text-slate-800 dark:text-white/90">
-              {formatTime(user.createTime)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-slate-500 dark:text-white/50">最近更新</dt>
-            <dd className="font-medium text-slate-800 dark:text-white/90">
-              {formatTime(user.updateTime)}
-            </dd>
-          </div>
-        </dl>
-      ) : null}
-
-      <div className="mt-6 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          disabled={loading}
-          onClick={() => void loadProfile()}
-          className="rounded-xl border border-slate-200 px-4 py-2 text-xs text-slate-600 transition hover:border-sky-400 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-white/70 dark:hover:border-sky-400/60 dark:hover:text-sky-300"
-        >
-          刷新
-        </button>
-        <button
-          type="button"
-          onClick={() => void onLogout()}
-          className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-rose-600 active:scale-[0.99]"
-        >
-          登出当前会话
-        </button>
+        <div>
+          <p className="profile-hero__name">{displayName}</p>
+          {user && <p className="profile-hero__id">ID #{user.id}</p>}
+        </div>
       </div>
-    </section>
+
+      <List header="账号信息">
+        <List.Item extra={user?.username || '—'}>用户名</List.Item>
+        <List.Item extra={user?.nickname || '—'}>昵称</List.Item>
+        <List.Item extra={formatTime(user?.createTime)}>注册时间</List.Item>
+        <List.Item extra={formatTime(user?.updateTime)}>最近更新</List.Item>
+      </List>
+
+      <List header="操作">
+        <List.Item clickable onClick={() => void loadProfile()}>
+          {loading ? '刷新中…' : '刷新资料'}
+        </List.Item>
+        <List.Item clickable onClick={() => void navigate('/todos')}>
+          待办列表
+        </List.Item>
+        <List.Item clickable onClick={() => void navigate('/settings')}>
+          设置
+        </List.Item>
+      </List>
+
+      <div className="profile-logout">
+        <Button block color="danger" onClick={onLogout}>
+          退出登录
+        </Button>
+      </div>
+    </div>
   );
 }
 

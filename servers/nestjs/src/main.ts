@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from '@/app.module';
@@ -16,10 +17,24 @@ async function bootstrap() {
   const logger = app.get(Logger);
   app.useLogger(logger);
 
+  const config = app.get(ConfigService);
+
+  // 安全响应头
+  app.use(helmet());
+
+  // CORS:CORS_ORIGIN 配置则按白名单放行,留空放行所有来源(仅建议开发环境)
+  const corsOrigin = config.get<string>('CORS_ORIGIN');
+  app.enableCors({
+    origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true,
+    credentials: true,
+  });
+
+  // 优雅关闭:收到 SIGTERM/SIGINT 时触发 onModuleDestroy 钩子,干净退出
+  app.enableShutdownHooks();
+
   // 挂载 Swagger 文档
   const swaggerPath = setupSwagger(app);
 
-  const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
 
   await app.listen(port);

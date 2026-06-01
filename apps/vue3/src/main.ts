@@ -1,6 +1,11 @@
 import { createApp } from 'vue';
+import Vant from 'vant';
+import 'vant/lib/index.css';
 import '@/style.css';
 import App from '@/App.vue';
 import { router } from '@/router';
+import { setupTheme } from '@/stores/theme';
 
-createApp(App).use(router).mount('#app');
+setupTheme();
+
+createApp(App).use(Vant).use(router).mount('#app');

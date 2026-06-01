@@ -11,6 +11,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    // antd-mobile 整体体积较大，单包合理，放宽体积告警阈值
+    chunkSizeWarningLimit: 700,
+  },
   server: {
     proxy: {
       '/api': {
