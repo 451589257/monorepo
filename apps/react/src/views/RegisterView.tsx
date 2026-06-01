@@ -1,135 +1,115 @@
 import { useRequest } from 'alova/client';
-import { useMemo, useState, type FormEvent } from 'react';
+import { Button, Form, Input, NavBar, Toast } from 'antd-mobile';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { register as registerApi } from '@/api/auth';
+import { register as registerApi, encryptUserPassword } from '@/api/auth';
 import { setAuth } from '@/stores/auth';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]+$/;
 
+interface RegisterForm {
+  username: string;
+  nickname?: string;
+  password: string;
+  confirmPassword: string;
+}
+
+function validate(values: RegisterForm): string | null {
+  const u = values.username.trim();
+  if (u.length < 3 || u.length > 32) return '用户名长度需在 3 ~ 32 位';
+  if (!USERNAME_RE.test(u)) return '用户名只能包含字母、数字、下划线';
+  if (values.password.length < 6 || values.password.length > 64) return '密码长度需在 6 ~ 64 位';
+  if (values.password !== values.confirmPassword) return '两次输入的密码不一致';
+  if (values.nickname && values.nickname.length > 32) return '昵称长度最多 32 位';
+  return null;
+}
+
 function RegisterView() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const validation = useMemo<string | null>(() => {
-    const u = username.trim();
-    if (u.length < 3 || u.length > 32) return '用户名长度需在 3 ~ 32 位';
-    if (!USERNAME_RE.test(u)) return '用户名只能包含字母、数字、下划线';
-    if (password.length < 6 || password.length > 64) return '密码长度需在 6 ~ 64 位';
-    if (password !== confirmPassword) return '两次输入的密码不一致';
-    if (nickname && nickname.length > 32) return '昵称长度最多 32 位';
-    return null;
-  }, [username, password, confirmPassword, nickname]);
-
-  const canSubmit = username && password && confirmPassword && !validation;
 
   const { loading, send } = useRequest(
-    () =>
-      registerApi({
-        username: username.trim(),
-        password,
-        nickname: nickname.trim() || undefined,
-      }),
+    (body: { username: string; password: string; nickname?: string }) => registerApi(body),
     { immediate: false },
   );
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!canSubmit || loading) return;
-    setErrorMsg('');
+  async function onFinish(values: RegisterForm) {
+    if (loading) return;
+    const error = validate(values);
+    if (error) {
+      Toast.show({ content: error });
+      return;
+    }
     try {
-      const result = await send();
+      const encryptedPassword = await encryptUserPassword(values.password);
+      const result = await send({
+        username: values.username.trim(),
+        password: encryptedPassword,
+        nickname: values.nickname?.trim() || undefined,
+      });
       setAuth({
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         user: result.user,
       });
-      void navigate('/todos', { replace: true });
+      void navigate('/home', { replace: true });
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '注册失败');
+      Toast.show({ icon: 'fail', content: err instanceof Error ? err.message : '注册失败' });
     }
   }
 
   return (
-    <section className="w-full max-w-sm rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur dark:border-white/10 dark:bg-slate-900/60">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">注册</h1>
-        <p className="mt-1 text-xs text-slate-500 dark:text-white/50">创建账号开始使用。</p>
-      </header>
+    <div className="page page--auth">
+      <NavBar onBack={() => void navigate(-1)}>注册</NavBar>
 
-      <form className="space-y-4" onSubmit={(e) => void onSubmit(e)}>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600 dark:text-white/70">用户名</span>
-          <input
-            type="text"
-            autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="3 ~ 32 位，字母/数字/下划线"
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600 dark:text-white/70">
-            昵称（选填）
-          </span>
-          <input
-            type="text"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="可空，最长 32 位"
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600 dark:text-white/70">密码</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="6 ~ 64 位"
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600 dark:text-white/70">确认密码</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="再输一次"
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40"
-          />
-        </label>
+      <div className="auth-hero">
+        <div className="auth-hero__logo">✨</div>
+        <h1 className="auth-hero__title">创建账号</h1>
+        <p className="auth-hero__sub">注册后即可开始使用</p>
+      </div>
 
-        {validation && <p className="text-xs text-amber-600 dark:text-amber-300">{validation}</p>}
-        {errorMsg && <p className="text-xs text-rose-600 dark:text-rose-400">⚠ {errorMsg}</p>}
-
-        <button
-          type="submit"
-          disabled={!canSubmit || loading}
-          className="w-full rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-sky-500"
+      <Form
+        layout="horizontal"
+        onFinish={(values: RegisterForm) => void onFinish(values)}
+        footer={
+          <Button block type="submit" color="primary" loading={loading} loadingText="注册中">
+            注册并登录
+          </Button>
+        }
+      >
+        <Form.Item
+          name="username"
+          label="用户名"
+          rules={[{ required: true, message: '请输入用户名' }]}
         >
-          {loading ? '注册中…' : '注册并登录'}
-        </button>
-      </form>
+          <Input placeholder="3 ~ 32 位，字母/数字/下划线" autoComplete="username" clearable />
+        </Form.Item>
+        <Form.Item name="nickname" label="昵称">
+          <Input placeholder="选填，最长 32 位" clearable />
+        </Form.Item>
+        <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
+          <Input type="password" placeholder="6 ~ 64 位" autoComplete="new-password" clearable />
+        </Form.Item>
+        <Form.Item
+          name="confirmPassword"
+          label="确认密码"
+          rules={[{ required: true, message: '请再次输入密码' }]}
+        >
+          <Input
+            type="password"
+            placeholder="再输入一次密码"
+            autoComplete="new-password"
+            clearable
+          />
+        </Form.Item>
+      </Form>
 
-      <p className="mt-6 text-center text-xs text-slate-500 dark:text-white/50">
+      <p className="auth-foot">
         已经有账号？
-        <Link
-          to="/login"
-          className="ml-1 font-medium text-sky-600 hover:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200"
-        >
+        <Link className="auth-link" to="/login">
           去登录
         </Link>
       </p>
-    </section>
+    </div>
   );
 }
 

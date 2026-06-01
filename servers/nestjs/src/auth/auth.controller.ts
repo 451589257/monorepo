@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 
@@ -8,6 +8,8 @@ import { Public } from '@/auth/decorators/public.decorator';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RefreshTokenDto } from '@/auth/dto/refresh-token.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
+import { DecryptPasswordInterceptor } from '@/auth/interceptors/decrypt-password.interceptor';
+import { RsaCryptoService } from '@/auth/rsa-crypto.service';
 import type { JwtPayload } from '@/auth/types/jwt-payload.type';
 import { LogRequest } from '@/common/logging/log-request.decorator';
 
@@ -16,10 +18,22 @@ import { LogRequest } from '@/common/logging/log-request.decorator';
 @UseGuards(ThrottlerGuard)
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly rsaCryptoService: RsaCryptoService,
+  ) {}
+
+  @Public()
+  @ApiOperation({ summary: '获取密码加密公钥(SPKI/PEM)' })
+  @SkipThrottle()
+  @Get('public-key')
+  publicKey() {
+    return { publicKey: this.rsaCryptoService.getPublicKey() };
+  }
 
   @Public()
   @ApiOperation({ summary: '用户注册' })
+  @UseInterceptors(DecryptPasswordInterceptor)
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -27,6 +41,7 @@ export class AuthController {
 
   @Public()
   @ApiOperation({ summary: '用户登录' })
+  @UseInterceptors(DecryptPasswordInterceptor)
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);

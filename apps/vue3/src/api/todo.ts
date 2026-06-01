@@ -36,6 +36,9 @@ export const listTodos = (params: ListTodoParams = {}) => {
 export const createTodo = (body: { title: string; description?: string }) =>
   alovaInstance.Post<Todo>('/todo/create', body);
 
+export const updateTodo = (id: number, body: { title?: string; description?: string }) =>
+  alovaInstance.Post<Todo>(`/todo/update/${id}`, body);
+
 export const updateTodoStatus = (id: number, status: TodoStatus) =>
   alovaInstance.Post<Todo>(`/todo/updateStatus/${id}`, { status });
 

@@ -1,23 +1,25 @@
 <script setup lang="ts">
 import { useRequest } from 'alova/client';
-import { onMounted, ref } from 'vue';
+import { showConfirmDialog, showToast } from 'vant';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { getMe, logout as logoutApi } from '@/api/auth';
 import { authState, clearAuth, getRefreshToken, setUser } from '@/stores/auth';
 
 const router = useRouter();
-const errorMsg = ref('');
 
 const { loading, send: refresh } = useRequest(() => getMe(), { immediate: false });
 
+const user = computed(() => authState.user);
+const displayName = computed(() => user.value?.nickname || user.value?.username || '未登录');
+
 async function loadProfile() {
-  errorMsg.value = '';
   try {
-    const user = await refresh();
-    setUser(user);
+    const me = await refresh();
+    setUser(me);
   } catch (err) {
-    errorMsg.value = err instanceof Error ? err.message : '加载失败';
+    showToast(err instanceof Error ? err.message : '加载失败');
   }
 }
 
@@ -31,6 +33,17 @@ function formatTime(value: string | null | undefined) {
 }
 
 async function onLogout() {
+  try {
+    await showConfirmDialog({
+      title: '退出登录',
+      message: '确认退出当前账号吗？',
+      confirmButtonText: '退出',
+      confirmButtonColor: '#ee0a24',
+    });
+  } catch {
+    // 用户取消
+    return;
+  }
   const refreshToken = getRefreshToken();
   if (refreshToken) {
     try {
@@ -45,72 +58,94 @@ async function onLogout() {
 </script>
 
 <template>
-  <section
-    class="w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
-  >
-    <header class="mb-6 flex items-center gap-3">
-      <span
-        class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-xl dark:bg-emerald-500/15"
-      >
-        👤
-      </span>
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900 dark:text-white">个人中心</h1>
-        <p class="text-xs text-slate-500 dark:text-white/50">查看并管理你的账号</p>
-      </div>
-    </header>
+  <div class="profile">
+    <van-nav-bar title="我的" fixed placeholder />
 
-    <p v-if="loading" class="text-sm text-slate-400 dark:text-white/40">加载中…</p>
-    <p v-else-if="errorMsg" class="text-sm text-rose-600 dark:text-rose-400">⚠ {{ errorMsg }}</p>
-
-    <dl
-      v-else-if="authState.user"
-      class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 text-sm dark:border-white/10 dark:bg-white/5"
-    >
-      <div class="flex items-center justify-between">
-        <dt class="text-slate-500 dark:text-white/50">用户 ID</dt>
-        <dd class="font-medium text-slate-800 dark:text-white/90">#{{ authState.user.id }}</dd>
+    <!-- 用户卡片 -->
+    <div class="profile__hero">
+      <div class="profile__avatar">
+        <van-icon name="manager" />
       </div>
-      <div class="flex items-center justify-between">
-        <dt class="text-slate-500 dark:text-white/50">用户名</dt>
-        <dd class="font-medium text-slate-800 dark:text-white/90">{{ authState.user.username }}</dd>
+      <div class="profile__meta">
+        <p class="profile__name">{{ displayName }}</p>
+        <p v-if="user" class="profile__id">ID #{{ user.id }}</p>
       </div>
-      <div class="flex items-center justify-between">
-        <dt class="text-slate-500 dark:text-white/50">昵称</dt>
-        <dd class="font-medium text-slate-800 dark:text-white/90">
-          {{ authState.user.nickname || '—' }}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between">
-        <dt class="text-slate-500 dark:text-white/50">注册时间</dt>
-        <dd class="font-medium text-slate-800 dark:text-white/90">
-          {{ formatTime(authState.user.createTime) }}
-        </dd>
-      </div>
-      <div class="flex items-center justify-between">
-        <dt class="text-slate-500 dark:text-white/50">最近更新</dt>
-        <dd class="font-medium text-slate-800 dark:text-white/90">
-          {{ formatTime(authState.user.updateTime) }}
-        </dd>
-      </div>
-    </dl>
-
-    <div class="mt-6 flex items-center justify-between gap-2">
-      <button
-        type="button"
-        class="rounded-xl border border-slate-200 px-4 py-2 text-xs text-slate-600 transition hover:border-emerald-400 hover:text-emerald-600 dark:border-white/10 dark:text-white/70 dark:hover:border-emerald-400/60 dark:hover:text-emerald-300"
-        :disabled="loading"
-        @click="loadProfile"
-      >
-        刷新
-      </button>
-      <button
-        type="button"
-        class="rounded-xl bg-rose-500 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-rose-600 active:scale-[0.99]"
-        @click="onLogout"
-      >
-        登出当前会话
-      </button>
     </div>
-  </section>
+
+    <div class="profile__body">
+      <van-cell-group inset title="账号信息">
+        <van-cell title="用户名" :value="user?.username || '—'" />
+        <van-cell title="昵称" :value="user?.nickname || '—'" />
+        <van-cell title="注册时间" :value="formatTime(user?.createTime)" />
+        <van-cell title="最近更新" :value="formatTime(user?.updateTime)" />
+      </van-cell-group>
+
+      <van-cell-group inset title="操作" class="profile__group">
+        <van-cell
+          title="刷新资料"
+          icon="replay"
+          is-link
+          :class="{ 'is-loading': loading }"
+          @click="loadProfile"
+        />
+        <van-cell title="待办列表" icon="todo-list-o" is-link to="/todos" />
+        <van-cell title="设置" icon="setting-o" is-link to="/settings" />
+      </van-cell-group>
+
+      <div class="profile__logout">
+        <van-button round block type="danger" @click="onLogout">退出登录</van-button>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.profile {
+  min-height: 100vh;
+  background: var(--app-page-bg);
+}
+
+.profile__hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px;
+  background: linear-gradient(135deg, var(--app-hero-from) 0%, var(--app-hero-to) 100%);
+  color: #fff;
+}
+
+.profile__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 32px;
+}
+
+.profile__name {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.profile__id {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.profile__body {
+  padding: 12px 0;
+}
+
+.profile__group {
+  margin-top: 12px;
+}
+
+.profile__logout {
+  margin: 24px 16px 0;
+}
+</style>

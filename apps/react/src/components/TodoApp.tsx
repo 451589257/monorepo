@@ -1,5 +1,23 @@
-import { useRequest, useWatcher } from 'alova/client';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useRequest } from 'alova/client';
+import {
+  Checkbox,
+  Dialog,
+  Empty,
+  InfiniteScroll,
+  Input,
+  List,
+  NavBar,
+  PullToRefresh,
+  SearchBar,
+  Skeleton,
+  SwipeAction,
+  Tabs,
+  Tag,
+  Toast,
+} from 'antd-mobile';
+import { AddOutline, DeleteOutline } from 'antd-mobile-icons';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import {
   createTodo,
@@ -9,101 +27,132 @@ import {
   type Todo,
   type TodoStatus,
 } from '@/api/todo';
+import { addSearchHistory, clearSearchHistory, getSearchHistory } from '@/utils/searchHistory';
 
 type StatusFilter = '' | TodoStatus;
 
 const PAGE_SIZE = 10;
 
-const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
+const STATUS_TABS: { label: string; value: StatusFilter }[] = [
   { label: '全部', value: '' },
   { label: '待办', value: 'PENDING' },
   { label: '进行中', value: 'ACTIVE' },
   { label: '已完成', value: 'DONE' },
 ];
 
-const STATUS_BADGE: Record<TodoStatus, { label: string; className: string }> = {
-  PENDING: {
-    label: '待办',
-    className: 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white/70',
-  },
-  ACTIVE: {
-    label: '进行中',
-    className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
-  },
-  DONE: {
-    label: '已完成',
-    className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-  },
+const STATUS_BADGE: Record<TodoStatus, { label: string; color: string }> = {
+  PENDING: { label: '待办', color: 'primary' },
+  ACTIVE: { label: '进行中', color: 'warning' },
+  DONE: { label: '已完成', color: 'success' },
 };
 
 const isDone = (status: TodoStatus) => status === 'DONE';
 
 function TodoApp() {
-  const [searchInput, setSearchInput] = useState('');
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const [searchText, setSearchText] = useState('');
-  const [status, setStatus] = useState<StatusFilter>('');
-  const [pageNum, setPageNum] = useState(1);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [history, setHistory] = useState<string[]>(() => getSearchHistory());
+  const [status, setStatus] = useState<StatusFilter>(() => {
+    const s = searchParams.get('status');
+    return s === 'PENDING' || s === 'ACTIVE' || s === 'DONE' ? s : '';
+  });
 
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [total, setTotal] = useState(0);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [draft, setDraft] = useState('');
+  const [hasMore, setHasMore] = useState(true);
+  const [firstLoading, setFirstLoading] = useState(true);
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const [showCreate, setShowCreate] = useState(() => searchParams.get('create') === '1');
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftDesc, setDraftDesc] = useState('');
 
-  const {
-    loading,
-    send: refresh,
-    onSuccess: onListSuccess,
-    onError: onListError,
-  } = useWatcher(
-    () =>
+  // 用 ref 跟踪分页，避免闭包过期
+  const pageRef = useRef(1);
+
+  const { send: fetchList } = useRequest(
+    (page: number) =>
       listTodos({
-        pageNum,
+        pageNum: page,
         pageSize: PAGE_SIZE,
         title: searchText || undefined,
         status: status || undefined,
       }),
-    [searchText, status, pageNum],
-    { immediate: true, debounce: 0 },
+    { immediate: false },
   );
 
-  onListSuccess(({ data }) => {
-    setTodos(data.list);
-    setTotal(data.total);
-    setErrorMsg('');
-    const max = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
-    if (pageNum > max) setPageNum(max);
-  });
-  onListError(({ error }) => {
-    setErrorMsg(error.message || '加载失败');
-  });
+  // InfiniteScroll 的加载回调：基于 ref 续页
+  async function loadMore() {
+    const page = pageRef.current;
+    const data = await fetchList(page);
+    setTodos((prev) => (page === 1 ? data.list : [...prev, ...data.list]));
+    const loaded = (page - 1) * PAGE_SIZE + data.list.length;
+    if (loaded >= data.total || data.list.length === 0) {
+      setHasMore(false);
+    } else {
+      pageRef.current = page + 1;
+    }
+  }
 
+  // 首屏与筛选/搜索变化时重置
   useEffect(() => {
-    const trimmed = searchInput.trim();
-    if (trimmed === searchText) return;
-    const timer = setTimeout(() => {
-      setSearchText(trimmed);
-      setPageNum(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, searchText]);
+    setFirstLoading(true);
+    pageRef.current = 1;
+    setHasMore(true);
+    fetchList(1)
+      .then((data) => {
+        setTodos(data.list);
+        const loaded = data.list.length;
+        if (loaded >= data.total || data.list.length === 0) {
+          setHasMore(false);
+        } else {
+          pageRef.current = 2;
+        }
+      })
+      .catch((err: unknown) => {
+        Toast.show({ icon: 'fail', content: err instanceof Error ? err.message : '加载失败' });
+        setHasMore(false);
+      })
+      .finally(() => setFirstLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, status]);
+
+  async function onRefresh() {
+    pageRef.current = 1;
+    setHasMore(true);
+    const data = await fetchList(1);
+    setTodos(data.list);
+    if (data.list.length >= data.total || data.list.length === 0) {
+      setHasMore(false);
+    } else {
+      pageRef.current = 2;
+    }
+  }
+
+  function onSearch(value: string) {
+    const word = value.trim();
+    if (word) setHistory(addSearchHistory(word));
+    setSearchFocused(false);
+    setSearchText(word);
+  }
+
+  function applyHistory(word: string) {
+    setSearchText(word);
+    setSearchFocused(false);
+  }
+
+  function onClearHistory() {
+    setHistory(clearSearchHistory());
+  }
 
   function selectStatus(next: StatusFilter) {
     if (status === next) return;
     setStatus(next);
-    setPageNum(1);
-  }
-
-  function goPrev() {
-    if (pageNum > 1) setPageNum(pageNum - 1);
-  }
-  function goNext() {
-    if (pageNum < totalPages) setPageNum(pageNum + 1);
   }
 
   const { loading: submitting, send: submitTodo } = useRequest(
-    (title: string) => createTodo({ title }),
+    (body: { title: string; description?: string }) => createTodo(body),
     { immediate: false },
   );
 
@@ -112,32 +161,29 @@ function TodoApp() {
     { immediate: false },
   );
 
-  const { send: sendDelete } = useRequest((id: number) => deleteTodo(id), {
-    immediate: false,
-  });
+  const { send: sendDelete } = useRequest((id: number) => deleteTodo(id), { immediate: false });
 
   const withError = async <T,>(action: () => Promise<T>): Promise<T | null> => {
     try {
-      setErrorMsg('');
       return await action();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '操作失败');
+      Toast.show({ icon: 'fail', content: err instanceof Error ? err.message : '操作失败' });
       return null;
     }
   };
 
-  async function addTodo(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const title = draft.trim();
+  async function addTodo() {
+    const title = draftTitle.trim();
     if (!title || submitting) return;
-    const created = await withError(() => submitTodo(title));
+    const created = await withError(() =>
+      submitTodo({ title, description: draftDesc.trim() || undefined }),
+    );
     if (created) {
-      setDraft('');
-      if (pageNum === 1) {
-        await refresh();
-      } else {
-        setPageNum(1);
-      }
+      setDraftTitle('');
+      setDraftDesc('');
+      setShowCreate(false);
+      Toast.show({ icon: 'success', content: '已添加' });
+      void onRefresh();
     }
   }
 
@@ -146,204 +192,179 @@ function TodoApp() {
     const updated = await withError(() => sendToggle(todo.id, next));
     if (updated) {
       if (status && status !== updated.status) {
-        await refresh();
+        void onRefresh();
       } else {
         setTodos((prev) => prev.map((t) => (t.id === todo.id ? updated : t)));
       }
     }
   }
 
-  async function remove(id: number) {
-    const ok = await withError(() => sendDelete(id));
-    if (ok !== null) {
-      if (todos.length === 1 && pageNum > 1) {
-        setPageNum(pageNum - 1);
-      } else {
-        await refresh();
-      }
-    }
+  function remove(todo: Todo) {
+    void Dialog.confirm({
+      title: '删除待办',
+      content: `确认删除「${todo.title}」吗？`,
+      confirmText: '删除',
+      cancelText: '取消',
+      onConfirm: async () => {
+        const ok = await withError(() => sendDelete(todo.id));
+        if (ok !== null) {
+          Toast.show({ icon: 'success', content: '已删除' });
+          void onRefresh();
+        }
+      },
+    });
   }
 
-  async function clearCompleted() {
-    const res = await withError(() => listTodos({ pageNum: 1, pageSize: 1000, status: 'DONE' }));
-    if (!res || res.list.length === 0) return;
-    await withError(() => Promise.all(res.list.map((t) => sendDelete(t.id))));
-    if (pageNum !== 1) {
-      setPageNum(1);
-    } else {
-      await refresh();
-    }
-  }
+  const activeTab = STATUS_TABS.find((t) => t.value === status)?.value ?? '';
 
-  const hasResults = useMemo(() => todos.length > 0, [todos]);
+  useEffect(() => {
+    setShowCreate(searchParams.get('create') === '1');
+  }, [searchParams]);
 
   return (
-    <section className="w-full max-w-xl rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.6)]">
-      <header className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100 text-lg dark:bg-sky-500/15"
-          >
-            🚀
-          </span>
-          <div>
-            <h1 className="text-2xl leading-tight font-semibold text-slate-900 dark:text-white">
-              React Todo
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-white/50">Hooks · alova</p>
+    <div className="page">
+      <NavBar back={null} right={<AddOutline fontSize={22} onClick={() => setShowCreate(true)} />}>
+        待办
+      </NavBar>
+
+      <SearchBar
+        value={searchText}
+        placeholder="搜索标题"
+        style={{ padding: '8px 12px' }}
+        onChange={(v) => setSearchText(v)}
+        onSearch={onSearch}
+        onClear={() => onSearch('')}
+        onFocus={() => setSearchFocused(true)}
+      />
+
+      {searchFocused && history.length > 0 && (
+        <div className="search-history">
+          <div className="search-history__head">
+            <span>搜索历史</span>
+            <DeleteOutline onClick={onClearHistory} />
+          </div>
+          <div className="search-history__tags">
+            {history.map((word) => (
+              <Tag
+                key={word}
+                color="primary"
+                fill="outline"
+                round
+                onClick={() => applyHistory(word)}
+                style={{ padding: '4px 10px' }}
+              >
+                {word}
+              </Tag>
+            ))}
           </div>
         </div>
-        <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-          共 {total} 条
-        </span>
-      </header>
+      )}
 
-      <form className="flex gap-2" onSubmit={addTodo}>
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="今天打算完成什么？"
-          disabled={submitting}
-          className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-sky-400 dark:focus:ring-sky-400/20"
-        />
-        <button
-          type="submit"
-          disabled={!draft.trim() || submitting}
-          className="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-sky-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-sky-500"
-        >
-          {submitting ? '添加中…' : '添加'}
-        </button>
-      </form>
+      <Tabs activeKey={activeTab} onChange={(key) => selectStatus(key as StatusFilter)}>
+        {STATUS_TABS.map((tab) => (
+          <Tabs.Tab title={tab.label} key={tab.value} />
+        ))}
+      </Tabs>
 
-      <div className="relative mt-3">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-slate-400 dark:text-white/40"
-        >
-          🔍
-        </span>
-        <input
-          type="search"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="搜索标题…"
-          className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-3 pl-9 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-sky-400 dark:focus:ring-sky-400/20"
-        />
-      </div>
-
-      {errorMsg && <p className="mt-3 text-xs text-rose-600 dark:text-rose-400">⚠ {errorMsg}</p>}
-
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <div
-          role="tablist"
-          className="inline-flex rounded-xl bg-slate-100 p-1 text-xs dark:bg-white/5"
-        >
-          {STATUS_FILTERS.map((item) => (
-            <button
-              key={item.value || 'all'}
-              type="button"
-              role="tab"
-              aria-selected={status === item.value}
-              onClick={() => selectStatus(item.value)}
-              className={`rounded-lg px-3 py-1.5 transition ${
-                status === item.value
-                  ? 'bg-white text-sky-700 shadow-sm dark:bg-sky-500/20 dark:text-sky-200'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-white/50 dark:hover:text-white/80'
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={clearCompleted}
-          className="rounded-lg px-2 py-1 text-xs text-slate-500 transition hover:text-rose-500 dark:text-white/50 dark:hover:text-rose-400"
-        >
-          清除已完成
-        </button>
-      </div>
-
-      {loading ? (
-        <p className="mt-10 text-center text-sm text-slate-400 dark:text-white/40">加载中…</p>
-      ) : hasResults ? (
-        <ul className="mt-5 space-y-2">
-          {todos.map((todo) => (
-            <li
-              key={todo.id}
-              className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 transition hover:-translate-y-px hover:border-sky-300 hover:shadow-sm dark:border-white/10 dark:bg-white/5 dark:hover:border-sky-400/40 dark:hover:bg-white/[0.07]"
-            >
-              <input
-                id={`react-todo-${todo.id}`}
-                type="checkbox"
-                checked={isDone(todo.status)}
-                onChange={() => toggle(todo)}
-                className="h-4 w-4 cursor-pointer accent-sky-500"
+      <div className="todo-body">
+        {firstLoading ? (
+          <>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div className="todo-skeleton" key={i}>
+                <Skeleton.Title animated />
+                <Skeleton.Paragraph lineCount={1} animated />
+              </div>
+            ))}
+          </>
+        ) : (
+          <PullToRefresh onRefresh={onRefresh}>
+            {todos.length === 0 && !hasMore ? (
+              <Empty
+                description={searchText || status ? '没有匹配的待办' : '还没有待办，点右上角添加吧'}
               />
-              <label
-                htmlFor={`react-todo-${todo.id}`}
-                className={`flex-1 cursor-pointer truncate text-left text-sm transition ${
-                  isDone(todo.status)
-                    ? 'text-slate-400 line-through dark:text-white/40'
-                    : 'text-slate-800 dark:text-white/90'
-                }`}
-              >
-                {todo.title}
-              </label>
-              <span
-                className={`rounded-md px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[todo.status].className}`}
-              >
-                {STATUS_BADGE[todo.status].label}
-              </span>
-              <button
-                type="button"
-                aria-label="删除"
-                onClick={() => remove(todo.id)}
-                className="rounded-md px-2 py-1 text-xs text-slate-400 opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100 dark:text-white/40 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-              >
-                删除
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="mt-10 flex flex-col items-center gap-2 text-center text-sm text-slate-400 dark:text-white/40">
-          <span aria-hidden className="text-3xl">
-            ✨
-          </span>
-          <p>{searchText || status ? '没有匹配的待办' : '还没有待办，加一个开始吧'}</p>
-        </div>
-      )}
+            ) : (
+              <List>
+                {todos.map((todo) => (
+                  <SwipeAction
+                    key={todo.id}
+                    rightActions={[
+                      {
+                        key: 'delete',
+                        text: '删除',
+                        color: 'danger',
+                        onClick: () => remove(todo),
+                      },
+                    ]}
+                  >
+                    <List.Item
+                      prefix={
+                        <Checkbox
+                          checked={isDone(todo.status)}
+                          onChange={() => void toggle(todo)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      }
+                      extra={
+                        <Tag color={STATUS_BADGE[todo.status].color} round fill="outline">
+                          {STATUS_BADGE[todo.status].label}
+                        </Tag>
+                      }
+                      description={todo.description || undefined}
+                      onClick={() => void navigate(`/todos/${todo.id}`)}
+                      clickable
+                    >
+                      <span
+                        className={`todo-title ${isDone(todo.status) ? 'todo-title--done' : ''}`}
+                      >
+                        {todo.title}
+                      </span>
+                    </List.Item>
+                  </SwipeAction>
+                ))}
+              </List>
+            )}
+            <InfiniteScroll loadMore={loadMore} hasMore={hasMore} />
+          </PullToRefresh>
+        )}
+      </div>
 
-      {totalPages > 1 && (
-        <nav
-          aria-label="分页"
-          className="mt-5 flex items-center justify-between text-xs text-slate-500 dark:text-white/50"
-        >
-          <button
-            type="button"
-            disabled={pageNum <= 1}
-            onClick={goPrev}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 transition hover:border-sky-400 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-500 dark:border-white/10 dark:hover:border-sky-400/60 dark:hover:text-sky-300 dark:disabled:hover:border-white/10 dark:disabled:hover:text-white/50"
-          >
-            上一页
-          </button>
-          <span>
-            第 {pageNum} / 共 {totalPages} 页
-          </span>
-          <button
-            type="button"
-            disabled={pageNum >= totalPages}
-            onClick={goNext}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 transition hover:border-sky-400 hover:text-sky-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-500 dark:border-white/10 dark:hover:border-sky-400/60 dark:hover:text-sky-300 dark:disabled:hover:border-white/10 dark:disabled:hover:text-white/50"
-          >
-            下一页
-          </button>
-        </nav>
-      )}
-    </section>
+      <Dialog
+        visible={showCreate}
+        title="新建待办"
+        content={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Input
+              placeholder="标题：今天打算完成什么？"
+              value={draftTitle}
+              maxLength={100}
+              onChange={setDraftTitle}
+            />
+            <Input
+              placeholder="描述（选填）"
+              value={draftDesc}
+              maxLength={200}
+              onChange={setDraftDesc}
+              onEnterPress={() => void addTodo()}
+            />
+          </div>
+        }
+        closeOnAction
+        actions={[
+          [
+            { key: 'cancel', text: '取消' },
+            { key: 'confirm', text: '添加', bold: true, disabled: !draftTitle.trim() },
+          ],
+        ]}
+        onAction={(action) => {
+          if (action.key === 'confirm') {
+            void addTodo();
+          } else {
+            setShowCreate(false);
+          }
+        }}
+        onClose={() => setShowCreate(false)}
+      />
+    </div>
   );
 }
 

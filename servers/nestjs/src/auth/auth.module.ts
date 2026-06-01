@@ -8,6 +8,7 @@ import { AuthService } from '@/auth/auth.service';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { PasswordService } from '@/auth/password.service';
 import { RefreshTokenService } from '@/auth/refresh-token.service';
+import { RsaCryptoService } from '@/auth/rsa-crypto.service';
 import { UserModule } from '@/user/user.module';
 
 @Module({
@@ -38,7 +39,7 @@ import { UserModule } from '@/user/user.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, RefreshTokenService, PasswordService, JwtAuthGuard],
+  providers: [AuthService, RefreshTokenService, PasswordService, RsaCryptoService, JwtAuthGuard],
   exports: [AuthService, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

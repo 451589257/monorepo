@@ -93,7 +93,12 @@ const nestjs = defineConfig([
   },
 ]);
 
-const root = defineConfig([globalIgnores(['dist', 'eslint.config.js']), ...base, ...prettier, ...nestjs]);
+const root = defineConfig([
+  globalIgnores(['dist', 'eslint.config.js', '**/postcss.config.js']),
+  ...base,
+  ...prettier,
+  ...nestjs,
+]);
 
 export { base, react, vueConfig as vue, node, prettier, nestjs, root };
 export default root;

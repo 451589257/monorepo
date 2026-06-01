@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useRequest } from 'alova/client';
+import { showToast } from 'vant';
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { login as loginApi } from '@/api/auth';
+import { login as loginApi, encryptUserPassword } from '@/api/auth';
 import { setAuth } from '@/stores/auth';
 
 const router = useRouter();
@@ -11,83 +12,132 @@ const route = useRoute();
 
 const username = ref('');
 const password = ref('');
-const errorMsg = ref('');
 
 const canSubmit = computed(() => username.value.trim() && password.value);
 
 const { loading, send } = useRequest(
-  () => loginApi({ username: username.value.trim(), password: password.value }),
+  (encryptedPassword: string) =>
+    loginApi({ username: username.value.trim(), password: encryptedPassword }),
   { immediate: false },
 );
 
 async function onSubmit() {
   if (!canSubmit.value || loading.value) return;
-  errorMsg.value = '';
   try {
-    const result = await send();
+    const encryptedPassword = await encryptUserPassword(password.value);
+    const result = await send(encryptedPassword);
     setAuth({
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       user: result.user,
     });
-    const redirect = (route.query.redirect as string | undefined) || '/todos';
+    const redirect = (route.query.redirect as string | undefined) || '/home';
     router.push(redirect);
   } catch (err) {
-    errorMsg.value = err instanceof Error ? err.message : '登录失败';
+    showToast(err instanceof Error ? err.message : '登录失败');
   }
 }
 </script>
 
 <template>
-  <section
-    class="w-full max-w-sm rounded-3xl border border-slate-200/80 bg-white/90 p-7 shadow-[0_20px_50px_-20px_rgba(15,23,42,0.25)] backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
-  >
-    <header class="mb-6">
-      <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">登录</h1>
-      <p class="mt-1 text-xs text-slate-500 dark:text-white/50">欢迎回来，请输入账号继续。</p>
-    </header>
+  <div class="auth">
+    <van-nav-bar title="登录" fixed placeholder />
 
-    <form class="space-y-4" @submit.prevent="onSubmit">
-      <label class="block">
-        <span class="text-xs font-medium text-slate-600 dark:text-white/70">用户名</span>
-        <input
+    <div class="auth__hero">
+      <div class="auth__logo">🌿</div>
+      <h1 class="auth__title">欢迎回来</h1>
+      <p class="auth__sub">登录后继续管理你的待办</p>
+    </div>
+
+    <van-form class="auth__form" @submit="onSubmit">
+      <van-cell-group inset>
+        <van-field
           v-model="username"
-          type="text"
-          autocomplete="username"
-          class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/20"
+          name="username"
+          label="用户名"
           placeholder="请输入用户名"
+          autocomplete="username"
+          clearable
+          :rules="[{ required: true, message: '请输入用户名' }]"
         />
-      </label>
-      <label class="block">
-        <span class="text-xs font-medium text-slate-600 dark:text-white/70">密码</span>
-        <input
+        <van-field
           v-model="password"
           type="password"
-          autocomplete="current-password"
-          class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-emerald-400 dark:focus:ring-emerald-400/20"
+          name="password"
+          label="密码"
           placeholder="请输入密码"
+          autocomplete="current-password"
+          :rules="[{ required: true, message: '请输入密码' }]"
         />
-      </label>
+      </van-cell-group>
 
-      <p v-if="errorMsg" class="text-xs text-rose-600 dark:text-rose-400">⚠ {{ errorMsg }}</p>
+      <div class="auth__actions">
+        <van-button
+          round
+          block
+          type="primary"
+          native-type="submit"
+          :loading="loading"
+          loading-text="登录中…"
+          :disabled="!canSubmit"
+        >
+          登录
+        </van-button>
+      </div>
+    </van-form>
 
-      <button
-        type="submit"
-        :disabled="!canSubmit || loading"
-        class="w-full rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-500"
-      >
-        {{ loading ? '登录中…' : '登录' }}
-      </button>
-    </form>
-
-    <p class="mt-6 text-center text-xs text-slate-500 dark:text-white/50">
+    <p class="auth__foot">
       还没有账号？
-      <RouterLink
-        to="/register"
-        class="font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
-      >
-        去注册
-      </RouterLink>
+      <RouterLink class="auth__link" to="/register">去注册</RouterLink>
     </p>
-  </section>
+  </div>
 </template>
+
+<style scoped>
+.auth {
+  min-height: 100vh;
+  background: var(--app-page-bg);
+}
+
+.auth__hero {
+  padding: 32px 16px 8px;
+  text-align: center;
+}
+
+.auth__logo {
+  font-size: 44px;
+}
+
+.auth__title {
+  margin: 12px 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.auth__sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-3);
+}
+
+.auth__form {
+  margin-top: 16px;
+}
+
+.auth__actions {
+  margin: 24px 16px 0;
+}
+
+.auth__foot {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--app-text-3);
+}
+
+.auth__link {
+  color: #1989fa;
+  font-weight: 600;
+}
+</style>

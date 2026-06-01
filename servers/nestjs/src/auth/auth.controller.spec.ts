@@ -3,6 +3,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AuthController } from '@/auth/auth.controller';
 import { AuthService } from '@/auth/auth.service';
+import { RsaCryptoService } from '@/auth/rsa-crypto.service';
 import type { JwtPayload } from '@/auth/types/jwt-payload.type';
 
 describe('AuthController', () => {
@@ -10,6 +11,7 @@ describe('AuthController', () => {
   let authService: jest.Mocked<
     Pick<AuthService, 'register' | 'login' | 'refresh' | 'logout' | 'getCurrentUser'>
   >;
+  let rsaCryptoService: jest.Mocked<Pick<RsaCryptoService, 'getPublicKey' | 'decrypt'>>;
 
   beforeEach(async () => {
     authService = {
@@ -19,16 +21,32 @@ describe('AuthController', () => {
       logout: jest.fn(),
       getCurrentUser: jest.fn(),
     };
+    rsaCryptoService = {
+      getPublicKey: jest
+        .fn()
+        .mockReturnValue('-----BEGIN PUBLIC KEY-----\nMOCK\n-----END PUBLIC KEY-----'),
+      decrypt: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: RsaCryptoService, useValue: rsaCryptoService },
+      ],
     })
       .overrideGuard(ThrottlerGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<AuthController>(AuthController);
+  });
+
+  it('publicKey 返回 RSA 公钥', () => {
+    expect(controller.publicKey()).toEqual({
+      publicKey: '-----BEGIN PUBLIC KEY-----\nMOCK\n-----END PUBLIC KEY-----',
+    });
+    expect(rsaCryptoService.getPublicKey).toHaveBeenCalled();
   });
 
   it('register 委托给 authService.register', async () => {
