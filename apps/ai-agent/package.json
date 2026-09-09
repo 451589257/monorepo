@@ -1,0 +1,26 @@
+{
+  "name": "ai-agent",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "chat": "tsx --env-file-if-exists=.env src/demos/chat.ts",
+    "agent": "tsx --env-file-if-exists=.env src/demos/agent.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.9",
+    "tsx": "^4.20.3",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.121.0",
+    "@google/genai": "^2.19.0",
+    "expr-eval": "^2.0.2",
+    "openai": "^7.4.0"
+  }
+}
