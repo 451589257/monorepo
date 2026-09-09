@@ -1,93 +1,3 @@
-<script setup lang="ts">
-import { useRequest } from 'alova/client';
-import { showToast } from 'vant';
-import { computed } from 'vue';
-import { useRouter } from 'vue-router';
-
-import { listTodos, type TodoStatus } from '@/api/todo';
-import { authState } from '@/stores/auth';
-
-const router = useRouter();
-
-const username = computed(() => authState.user?.nickname || authState.user?.username || '访客');
-
-// 一次性拉取较大页，前端聚合各状态数量（不新增后端接口）
-const { data, loading, send } = useRequest(() => listTodos({ pageNum: 1, pageSize: 1000 }), {
-  immediate: true,
-  initialData: { list: [], total: 0 },
-});
-
-const counts = computed(() => {
-  const list = data.value?.list ?? [];
-  const base: Record<TodoStatus, number> = { PENDING: 0, ACTIVE: 0, DONE: 0 };
-  for (const todo of list) base[todo.status] += 1;
-  return base;
-});
-
-const total = computed(() => data.value?.total ?? 0);
-const doneRate = computed(() => {
-  const t = total.value;
-  if (!t) return 0;
-  return Math.round((counts.value.DONE / t) * 100);
-});
-
-const STATS = computed(() => [
-  { label: '全部', value: total.value, color: '#1989fa' },
-  { label: '进行中', value: counts.value.ACTIVE, color: '#ff976a' },
-  { label: '已完成', value: counts.value.DONE, color: '#07c160' },
-]);
-
-// 状态分布（可视化条形）
-const DISTRIBUTION = computed(() => {
-  const t = total.value || 1;
-  return [
-    {
-      label: '待办',
-      value: counts.value.PENDING,
-      color: '#1989fa',
-      percent: (counts.value.PENDING / t) * 100,
-    },
-    {
-      label: '进行中',
-      value: counts.value.ACTIVE,
-      color: '#ff976a',
-      percent: (counts.value.ACTIVE / t) * 100,
-    },
-    {
-      label: '已完成',
-      value: counts.value.DONE,
-      color: '#07c160',
-      percent: (counts.value.DONE / t) * 100,
-    },
-  ];
-});
-
-const SHORTCUTS = [
-  { label: '我的待办', icon: 'todo-list-o', path: '/todos', color: '#1989fa' },
-  { label: '新建待办', icon: 'add-o', path: '/todos?create=1', color: '#07c160' },
-  { label: '个人中心', icon: 'user-o', path: '/profile', color: '#ff976a' },
-  { label: '设置', icon: 'setting-o', path: '/settings', color: '#7232dd' },
-];
-
-function go(path: string) {
-  router.push(path);
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 6) return '夜深了';
-  if (h < 12) return '早上好';
-  if (h < 14) return '中午好';
-  if (h < 18) return '下午好';
-  return '晚上好';
-}
-
-async function onRefresh() {
-  await send();
-  showToast('已刷新');
-}
-</script>
-
 <template>
   <div class="home">
     <van-nav-bar title="首页" fixed placeholder />
@@ -185,6 +95,96 @@ async function onRefresh() {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { useRequest } from 'alova/client';
+import { showToast } from 'vant';
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { listTodos, type TodoStatus } from '@/api/todo';
+import { authState } from '@/stores/auth';
+
+const router = useRouter();
+
+const username = computed(() => authState.user?.nickname || authState.user?.username || '访客');
+
+// 一次性拉取较大页，前端聚合各状态数量（不新增后端接口）
+const { data, loading, send } = useRequest(() => listTodos({ pageNum: 1, pageSize: 1000 }), {
+  immediate: true,
+  initialData: { list: [], total: 0 },
+});
+
+const counts = computed(() => {
+  const list = data.value?.list ?? [];
+  const base: Record<TodoStatus, number> = { PENDING: 0, ACTIVE: 0, DONE: 0 };
+  for (const todo of list) base[todo.status] += 1;
+  return base;
+});
+
+const total = computed(() => data.value?.total ?? 0);
+const doneRate = computed(() => {
+  const t = total.value;
+  if (!t) return 0;
+  return Math.round((counts.value.DONE / t) * 100);
+});
+
+const STATS = computed(() => [
+  { label: '全部', value: total.value, color: '#1989fa' },
+  { label: '进行中', value: counts.value.ACTIVE, color: '#ff976a' },
+  { label: '已完成', value: counts.value.DONE, color: '#07c160' },
+]);
+
+// 状态分布（可视化条形）
+const DISTRIBUTION = computed(() => {
+  const t = total.value || 1;
+  return [
+    {
+      label: '待办',
+      value: counts.value.PENDING,
+      color: '#1989fa',
+      percent: (counts.value.PENDING / t) * 100,
+    },
+    {
+      label: '进行中',
+      value: counts.value.ACTIVE,
+      color: '#ff976a',
+      percent: (counts.value.ACTIVE / t) * 100,
+    },
+    {
+      label: '已完成',
+      value: counts.value.DONE,
+      color: '#07c160',
+      percent: (counts.value.DONE / t) * 100,
+    },
+  ];
+});
+
+const SHORTCUTS = [
+  { label: '我的待办', icon: 'todo-list-o', path: '/todos', color: '#1989fa' },
+  { label: '新建待办', icon: 'add-o', path: '/todos?create=1', color: '#07c160' },
+  { label: '个人中心', icon: 'user-o', path: '/profile', color: '#ff976a' },
+  { label: '设置', icon: 'setting-o', path: '/settings', color: '#7232dd' },
+];
+
+function go(path: string) {
+  router.push(path);
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 6) return '夜深了';
+  if (h < 12) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  return '晚上好';
+}
+
+async function onRefresh() {
+  await send();
+  showToast('已刷新');
+}
+</script>
 
 <style scoped>
 .home {
